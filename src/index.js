@@ -48,7 +48,7 @@ AlbumRatingSkill.prototype.intentHandlers = {
     },
 
     "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can say tell me the album rating of Taylor Swift's 1989, or, you can say exit... What can I help you with?", "What can I help you with?");
+        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
     },
 
     "AMAZON.StopIntent": function (intent, session, response) {
@@ -66,20 +66,14 @@ function handleAlbumRatingRequest(intent,response) {
     var album = intent.slots.Album.value;
     var artist = intent.slots.Artist.value;
     var albumAndArtist = album + ' ' + artist;
-    console.log("Requested artist and album: ");
-    console.log(albumAndArtist);
 
     // Create speech output
-    var speechOutput = "Here's what Pitchfork has to say about " + album + " by " + artist + ": ";
 
-    helper.getAlbumRating(albumAndArtist, function(diseases) {
-        if(diseases.length > 0){
-            speechOutput += " You need the following vaccines before you go there: ";
-            for (var i = 0; i < diseases.length; i++) {
-                speechOutput += diseases[i] + ",";
-            }
-        }
-        response.tell(speechOutput + ".");
+    helper.getAlbumRating(albumAndArtist, function(albumRating) {
+        var speechOutput = "Here's what Pitchfork has to say about " + album + " by " + artist + ": ";
+        response.tell(speechOutput + albumRating);
+    }, function(errorFeedback){
+        response.tell(errorFeedback);
     });
 }
 
@@ -250,7 +244,7 @@ var helper = {
     /** Gets the given album's review from Pitchfork.
      *  Calls the callbackfunction with the abstract of the review.
      */
-    getAlbumRating: function (artistAndAlbum, callbackFunction) {
+    getAlbumRating: function (artistAndAlbum, callbackFunction, errorCallbackFunction) {
         // Scrape http://pitchfork.com/search/?query=
         // to find out the rating for the given album
         // Scrape tutorial here: https://www.sitepoint.com/web-scraping-in-node-js/
@@ -258,42 +252,15 @@ var helper = {
         request({
             uri: 'http://pitchfork.com/search/?query=' + artistAndAlbum,
         }, function(error, response, body) {
-            // console.log(body.split('window.App=')[1].split(';</script>')[0]);
-            var resultObject = JSON.parse(body.split('window.App=')[1].split(';</script>')[0]);
-            var review = resultObject.context.dispatcher.stores.SearchStore.results.albumreviews.items[0];
-            callbackFunction(review.abstract);
-            // var $ = cheerio.load(body);
-            // var contentArea = cheerio.load($("#contentArea").html());
-            // var countryLinks = contentArea("a");
-            // // Skip the alphabet links by starting at index 25
-            // for (var i = 25; i < countryLinks.length; i++) {
-            //     if(countryLinks[i].children[0].data === country) {
-            //         request({
-            //             uri: prefix + countryLinks[i].attribs.href,
-            //         }, function(error, response, body) {
-            //             var $ = cheerio.load(body);
-            //             var diseasesArea = cheerio.load($(".disease").html());
-            //             var diseases = diseasesArea(".group-head, .traveler-disease");
-            //             var diseasesToReturn = [];
-            //             for (var i = 0; i < diseases.length; i++) {
-            //                 var disease = diseases[i];
-            //                 // Skip everything after 'some travelers because we only want
-            //                 // to return the most important diseases
-            //                 if (disease.attribs.class === 'group-head') {
-            //                     if (disease.children[1].children[0].data === 'Some travelers') {
-            //                         break;
-            //                     }
-            //                 } else if (disease.children[0].next.children[0].data !== 'Routine vaccines') {
-            //                     diseasesToReturn.push(disease.children[0].next.children[0].data);
-            //                 }
-            //             }
-            //             callbackFunction(diseasesToReturn);
-            //         });
-            //         return;
-            //     }
-            // }
+            try{
+                var resultObject = JSON.parse(body.split('window.App=')[1].split(';</script>')[0]);
+                var review = resultObject.context.dispatcher.stores.SearchStore.results.albumreviews.items[0];
+                // Cut out the paragraph tags
+                review.abstract = review.abstract.replace('<p>','').replace('</p>','');
+                callbackFunction(review.abstract);
+            } catch (error) {
+                errorCallbackFunction('We couldn\'t find a result for the album you were looking for.');
+            }
         });
     }
 };
-
-helper.getAlbumRating('Kanye Twisted');
