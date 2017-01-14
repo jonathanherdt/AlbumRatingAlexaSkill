@@ -77,7 +77,7 @@ function handleAlbumRatingRequest(intent, response, language) {
         } else {
             speechOutput = 'Pitchfork hat ' + album + " von " + artist + " mit " + albumReview.rating + "bewertet. In der Zusammenfassung heißt es: " + albumReview.abstract;
         }
-        response.tell(speechOutput + albumRating);
+        response.tell(speechOutput);
     }, function(errorFeedback){
         if(language !== 'DE'){
             response.tell('I couldn\'t find a result for ' + album + ' by ' + artist + '.');
@@ -291,7 +291,3 @@ var helper = {
         });
     }
 };
-
-helper.getAlbumRating('Meow the Jewels', function(review){
-    console.log("The rating is " + review.rating + ". Abstract: " + review.abstract);
-});
