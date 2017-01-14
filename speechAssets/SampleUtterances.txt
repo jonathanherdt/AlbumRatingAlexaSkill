@@ -1,0 +1,9 @@
+GetNewAlbumRatingIntent {Album} from {Artist}
+GetNewAlbumRatingIntent {Artist} {Album}
+GetNewAlbumRatingIntent {Artist} album {Album}
+GetNewAlbumRatingIntent tell me the album rating of {Album} by {Artist}
+GetNewAlbumRatingIntent tell me the album rating of {Artist} {Album}
+GetNewAlbumRatingIntent tell me the album rating of {Artist} album {Album}
+GetNewAlbumRatingIntent what is Pitchfork's album rating of {Album} by {Artist}
+GetNewAlbumRatingIntent what is Pitchfork's album rating of {Artist} {Album}
+GetNewAlbumRatingIntent what is Pitchfork's album rating of {Artist} album {Album}

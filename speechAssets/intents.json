@@ -1,0 +1,26 @@
+{
+  "intents": [
+    {
+      "intent": "GetNewAlbumRatingIntent",
+      "slots": [
+	        {
+	          "name": "Artist",
+	          "type": "AMAZON.Artist"
+	        },
+        	{
+              "name": "Album",
+              "type": "AMAZON.MusicAlbum"
+            }
+	   ]
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    }
+  ]
+}
