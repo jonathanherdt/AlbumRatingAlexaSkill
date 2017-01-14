@@ -63,8 +63,8 @@ AlbumRatingSkill.prototype.intentHandlers = {
 };
 
 function handleAlbumRatingRequest(intent,response) {
-    var album = intent.slots.Album.value;
-    var artist = intent.slots.Artist.value;
+    var album = intent.slots.Album.value? intent.slots.Album.value : '';
+    var artist = intent.slots.Artist.value? intent.slots.Artist.value : '';
     var albumAndArtist = album + ' ' + artist;
 
     // Create speech output
@@ -255,8 +255,8 @@ var helper = {
             try{
                 var resultObject = JSON.parse(body.split('window.App=')[1].split(';</script>')[0]);
                 var review = resultObject.context.dispatcher.stores.SearchStore.results.albumreviews.items[0];
-                // Cut out the paragraph tags
-                review.abstract = review.abstract.replace('<p>','').replace('</p>','');
+                // Cut out HTML tags from the abstract
+                review.abstract = review.abstract.replace(/<\/?[^>]+(>|$)/g, "");
                 callbackFunction(review.abstract);
             } catch (error) {
                 errorCallbackFunction('We couldn\'t find a result for the album you were looking for.');
