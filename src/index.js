@@ -1,50 +1,33 @@
-/**
- * This sample demonstrates a simple skill built with the Amazon Alexa Skills Kit.
- * The Intent Schema, Custom Slots, and Sample Utterances for this skill, as well as
- * testing instructions are located at http://amzn.to/1LzFrj6
- *
- * For additional samples, visit the Alexa Skills Kit Getting Started guide at
- * http://amzn.to/1LGWsLG
- */
-
-var AlexaSkill = require('./AlexaSkill');
 var fs = require('fs');
-var cheerio = require('cheerio');
 var request = require("request");
+var cheerio = require("cheerio");
+var AlexaSkill = require('./AlexaSkill');
 
-/**
- * App ID for the skill
- */
-var APP_ID = undefined; //OPTIONAL: replace with "amzn1.echo-sdk-ams.app.[your-unique-value-here]";
+var APP_ID = 'amzn1.ask.skill.0fdc78be-c6a1-462b-9cfc-c8c1e01aeb11';
 
-var AlbumRatingSkill = function () {
-    AlexaSkill.call(this, APP_ID);
-};
-
-AlbumRatingSkill.prototype = Object.create(AlexaSkill.prototype);
-AlbumRatingSkill.prototype.constructor = AlbumRatingSkill;
-
-AlbumRatingSkill.prototype.eventHandlers.onSessionStarted = function (sessionStartedRequest, session) {
-    //console.log("onSessionStarted requestId: " + sessionStartedRequest.requestId + ", sessionId: " + session.sessionId);
-    // any initialization logic goes here
-};
-
-AlbumRatingSkill.prototype.eventHandlers.onLaunch = function (launchRequest, session, response) {
-    //console.log("onLaunch requestId: " + launchRequest.requestId + ", sessionId: " + session.sessionId);
-    handleAlbumRatingRequest(undefined, response);
-};
-
-/**
- * Overridden to show that a subclass can override this function to teardown session state.
- */
-AlbumRatingSkill.prototype.eventHandlers.onSessionEnded = function (sessionEndedRequest, session) {
-    //console.log("onSessionEnded requestId: " + sessionEndedRequest.requestId + ", sessionId: " + session.sessionId);
-    // any cleanup logic goes here
-};
-
-AlbumRatingSkill.prototype.intentHandlers = {
+var intentHandlersUS = {
     "GetNewAlbumRatingIntent": function (intent, session, response) {
-        handleAlbumRatingRequest(intent,response);
+        handleAlbumRatingRequest(intent, response, 'US');
+    },
+
+    "AMAZON.HelpIntent": function (intent, session, response) {
+        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
+    },
+
+    "AMAZON.StopIntent": function (intent, session, response) {
+        var speechOutput = "Goodbye";
+        this.emit(':tell', speechOutput);
+    },
+
+    "AMAZON.CancelIntent": function (intent, session, response) {
+        var speechOutput = "Goodbye";
+        this.emit(':tell', speechOutput);
+    }
+};
+
+var intentHandlersUK = {
+    "GetNewAlbumRatingIntent": function (intent, session, response) {
+        handleAlbumRatingRequest(intent, response, 'UK');
     },
 
     "AMAZON.HelpIntent": function (intent, session, response) {
@@ -62,25 +45,63 @@ AlbumRatingSkill.prototype.intentHandlers = {
     }
 };
 
-function handleAlbumRatingRequest(intent,response) {
+var intentHandlersDE = {
+    "GetNewAlbumRatingIntent": function (intent, session, response) {
+        handleAlbumRatingRequest(intent,response, 'DE');
+    },
+
+    "AMAZON.HelpIntent": function (intent, session, response) {
+        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
+    },
+
+    "AMAZON.StopIntent": function (intent, session, response) {
+        var speechOutput = "Auf Wiedersehen!";
+        response.tell(speechOutput);
+    },
+
+    "AMAZON.CancelIntent": function (intent, session, response) {
+        var speechOutput = "Auf Wiedersehen!";
+        response.tell(speechOutput);
+    }
+};
+
+function handleAlbumRatingRequest(intent, response, language) {
     var album = intent.slots.Album.value? intent.slots.Album.value : '';
     var artist = intent.slots.Artist.value? intent.slots.Artist.value : '';
     var albumAndArtist = album + ' ' + artist;
 
-    // Create speech output
-
-    helper.getAlbumRating(albumAndArtist, function(albumRating) {
-        var speechOutput = "Here's what Pitchfork has to say about " + album + " by " + artist + ": ";
+    helper.getAlbumRating(albumAndArtist, function(albumReview) {
+        var speechOutput = '';
+        if(language !== 'DE'){
+            speechOutput = "Pitchfork rated " + album + " by " + artist + " at " + albumReview.rating + ". They wrote: " + albumReview.abstract;
+        } else {
+            speechOutput = 'Pitchfork hat ' + album + " von " + artist + " mit " + albumReview.rating + "bewertet. In der Zusammenfassung heißt es: " + albumReview.abstract;
+        }
         response.tell(speechOutput + albumRating);
     }, function(errorFeedback){
-        response.tell(errorFeedback);
+        if(language !== 'DE'){
+            response.tell('I couldn\'t find a result for ' + album + ' by ' + artist + '.');
+        } else {
+            response.tell('Ich konnte keine Ergebnisse zu ' + album + ' von ' + artist + ' finden.')
+        }
     });
 }
 
 // Create the handler that responds to the Alexa Request.
 exports.handler = function (event, context) {
     // Create an instance of the SpaceGeek skill.
-    var skill = new AlbumRatingSkill();
+    var skill = new AlexaSkill(APP_ID);
+
+    var locale = event.request.locale;
+
+    if (locale == 'en-GB'){
+        skill.intentHandlers = intentHandlersUK;
+    } else if (locale == 'de-DE') {
+        skill.intentHandlers = intentHandlersDE;
+    } else {
+        skill.intentHandlers = intentHandlersUS;
+    }
+
     skill.execute(event, context);
 };
 
@@ -248,19 +269,29 @@ var helper = {
         // Scrape http://pitchfork.com/search/?query=
         // to find out the rating for the given album
         // Scrape tutorial here: https://www.sitepoint.com/web-scraping-in-node-js/
-        var prefix = 'http://pitchfork.com/search/?query=' + artistAndAlbum;
+        var prefix = 'http://pitchfork.com';
         request({
-            uri: 'http://pitchfork.com/search/?query=' + artistAndAlbum,
+            uri: prefix + '/search/?query=' + artistAndAlbum,
         }, function(error, response, body) {
             try{
                 var resultObject = JSON.parse(body.split('window.App=')[1].split(';</script>')[0]);
                 var review = resultObject.context.dispatcher.stores.SearchStore.results.albumreviews.items[0];
                 // Cut out HTML tags from the abstract
                 review.abstract = review.abstract.replace(/<\/?[^>]+(>|$)/g, "");
-                callbackFunction(review.abstract);
+                request({
+                    uri: prefix + review.site_url
+                }, function(error, response, body) {
+                    var $ = cheerio.load(body);
+                    review.rating = $(".score").html();
+                    callbackFunction(review);
+                });
             } catch (error) {
-                errorCallbackFunction('We couldn\'t find a result for the album you were looking for.');
+                errorCallbackFunction();
             }
         });
     }
 };
+
+helper.getAlbumRating('Meow the Jewels', function(review){
+    console.log("The rating is " + review.rating + ". Abstract: " + review.abstract);
+});
