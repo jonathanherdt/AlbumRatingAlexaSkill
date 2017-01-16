@@ -11,7 +11,7 @@ var intentHandlersUS = {
     },
 
     "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
+        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
     },
 
     "AMAZON.StopIntent": function (intent, session, response) {
@@ -31,7 +31,7 @@ var intentHandlersUK = {
     },
 
     "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
+        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
     },
 
     "AMAZON.StopIntent": function (intent, session, response) {
@@ -51,7 +51,7 @@ var intentHandlersDE = {
     },
 
     "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Tell me the album rating of Taylor Swift's 1989!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
+        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
     },
 
     "AMAZON.StopIntent": function (intent, session, response) {
@@ -91,6 +91,10 @@ function handleAlbumRatingRequest(intent, response, language) {
 exports.handler = function (event, context) {
     // Create an instance of the SpaceGeek skill.
     var skill = new AlexaSkill(APP_ID);
+
+    AlexaSkill.prototype.eventHandlers.onLaunch = function (launchRequest, session, response) {
+        response.tell('Which album can I help you with? Try it out like this: \'Ask album rating about Lemonade by Beyonce!\'');
+    }
 
     var locale = event.request.locale;
 
