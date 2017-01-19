@@ -1,14 +1,15 @@
 {
-  "name": "DecisionTree",
+  "name": "AlbumRater",
   "version": "1.0.0",
-  "description": "Alexa Decision Tree template",
+  "description": "Returns the album rating from Pitchfork of a given album",
   "main": "index.js",
   "dependencies": {
+    "alexa-app": "^2.4.0",
     "alexa-sdk": "^1.0.0",
     "cheerio": "^0.22.0",
     "request": "^2.79.0"
   },
   "devDependencies": {},
-  "author": "Amazon.com",
+  "author": "Jonathan Herdt <jonathanherdt@aol.de>",
   "license": "SEE LICENSE IN license.md"
 }

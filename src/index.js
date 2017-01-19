@@ -1,113 +1,87 @@
 var fs = require('fs');
 var request = require("request");
 var cheerio = require("cheerio");
-var AlexaSkill = require('./AlexaSkill');
+var Alexa = require('alexa-app');
 
 var APP_ID = 'amzn1.ask.skill.0fdc78be-c6a1-462b-9cfc-c8c1e01aeb11';
+var app = new Alexa.app('albumrater');
 
-var intentHandlersUS = {
-    "GetNewAlbumRatingIntent": function (intent, session, response) {
-        handleAlbumRatingRequest(intent, response, 'US');
-    },
+var language = 'US';
 
-    "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
-    },
-
-    "AMAZON.StopIntent": function (intent, session, response) {
-        var speechOutput = "Goodbye";
-        this.emit(':tell', speechOutput);
-    },
-
-    "AMAZON.CancelIntent": function (intent, session, response) {
-        var speechOutput = "Goodbye";
-        this.emit(':tell', speechOutput);
+app.launch( function (request, response) {
+    language = request.locale? request.locale : 'US';
+    var prompt, reprompt;
+    if(language === 'de-DE') {
+        reprompt = 'Mit welchem Album von welchem Künstler soll ich dir helfen?';
+        prompt = reprompt + ' Versuch\' es wie folgt: \'Frag\' Album-Bewerter nach Lemonade von Beyoncé\'';
+    } else {
+        reprompt = 'Which album by which artist can I help you with?';
+        prompt = reprompt + ' Try it out like this: \'Ask album rating about Lemonade by Beyonce!\'';
     }
-};
+    response.say(prompt).reprompt(reprompt).shouldEndSession(false).send();
+});
 
-var intentHandlersUK = {
-    "GetNewAlbumRatingIntent": function (intent, session, response) {
-        handleAlbumRatingRequest(intent, response, 'UK');
-    },
-
-    "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
-    },
-
-    "AMAZON.StopIntent": function (intent, session, response) {
-        var speechOutput = "Goodbye";
-        response.tell(speechOutput);
-    },
-
-    "AMAZON.CancelIntent": function (intent, session, response) {
-        var speechOutput = "Goodbye";
-        response.tell(speechOutput);
+app.intent('AMAZON.HelpIntent', function (request, response) {
+    var prompt, reprompt;
+    if(language === 'de-DE') {
+        reprompt = 'Wie kann ich dir weiterhelfen?';
+        prompt = 'Du kannst Anfragen so gestalten: \'Frag\' Album-Bewerter nach Lemonade von Beyoncé!\'' + reprompt;
+    } else {
+        reprompt = 'What can I help you with?';
+        prompt = 'You can make a request like \'Ask album rating about Lemonade by Beyonce!\', or, you can say \'Exit!\'... What can I help you with?' + reprompt;
     }
-};
+    response.say(prompt).reprompt(reprompt).shouldEndSession(true).send();
+});
 
-var intentHandlersDE = {
-    "GetNewAlbumRatingIntent": function (intent, session, response) {
-        handleAlbumRatingRequest(intent,response, 'DE');
-    },
-
-    "AMAZON.HelpIntent": function (intent, session, response) {
-        response.ask("You can make a request like 'Ask album rating about Lemonade by Beyonce!', or, you can say 'Exit!'... What can I help you with?", "What can I help you with?");
-    },
-
-    "AMAZON.StopIntent": function (intent, session, response) {
-        var speechOutput = "Auf Wiedersehen!";
-        response.tell(speechOutput);
-    },
-
-    "AMAZON.CancelIntent": function (intent, session, response) {
-        var speechOutput = "Auf Wiedersehen!";
-        response.tell(speechOutput);
+var exitFunction = function (request, response) {
+    var speechOutput;
+    if(language === 'de-DE') {
+        speechOutput = 'Auf Wiedersehen!';
+    } else {
+        speechOutput = 'Goodbye';
     }
-};
 
-function handleAlbumRatingRequest(intent, response, language) {
-    var album = intent.slots.Album.value? intent.slots.Album.value : '';
-    var artist = intent.slots.Artist.value? intent.slots.Artist.value : '';
+    response.say(speechOutput).send();
+}
+
+app.intent('AMAZON.StopIntent', exitFunction);
+app.intent('AMAZON.CancelIntent', exitFunction);
+
+app.intent('GetNewAlbumRatingIntent', {
+        'slots': {
+            'Album': 'AMAZON.MusicAlbum',
+            'Artist': 'AMAZON.Artist'
+        },
+        'utterances': ['{|tell me|what is} {|Pitchfork\'s|the} album rating of Album {by|from} Artist']
+    },
+    function (request, response) {
+        handleAlbumRatingRequest(request, response);
+        // Gotta return false because we handle the response asynchronously
+        return false;
+    }
+)
+
+function handleAlbumRatingRequest(request, response) {
+    var album = request.slot('Album')? request.slot('Album') : '';
+    var artist = request.slot('Artist')? request.slot('Artist') : '';
     var albumAndArtist = album + ' ' + artist;
 
     helper.getAlbumRating(albumAndArtist, function(albumReview) {
         var speechOutput = '';
-        if(language !== 'DE'){
+        if(language !== 'de-DE'){
             speechOutput = "Pitchfork rated " + album + " by " + artist + " at " + albumReview.rating + ". They wrote: " + albumReview.abstract;
         } else {
-            speechOutput = 'Pitchfork hat ' + album + " von " + artist + " mit " + albumReview.rating + "bewertet. In der Zusammenfassung heißt es: " + albumReview.abstract;
+            speechOutput = 'Pitchfork hat ' + album + " von " + artist + " mit " + albumReview.rating + "bewertet. In der Zusammenfassung heißt es: <s xml:lang=\"en-US\">" + albumReview.abstract + "</s>";
         }
-        response.tell(speechOutput);
+        response.say(speechOutput).send();
     }, function(errorFeedback){
-        if(language !== 'DE'){
-            response.tell('I couldn\'t find a result for ' + album + ' by ' + artist + '.');
+        if(language !== 'de-DE'){
+            response.say('I couldn\'t find a result for ' + album + ' by ' + artist + '.');
         } else {
-            response.tell('Ich konnte keine Ergebnisse zu ' + album + ' von ' + artist + ' finden.')
+            response.say('Ich konnte keine Ergebnisse zu ' + album + ' von ' + artist + ' finden.');
         }
     });
 }
-
-// Create the handler that responds to the Alexa Request.
-exports.handler = function (event, context) {
-    // Create an instance of the SpaceGeek skill.
-    var skill = new AlexaSkill(APP_ID);
-
-    AlexaSkill.prototype.eventHandlers.onLaunch = function (launchRequest, session, response) {
-        response.tell('Which album can I help you with? Try it out like this: \'Ask album rating about Lemonade by Beyonce!\'');
-    }
-
-    var locale = event.request.locale;
-
-    if (locale == 'en-GB'){
-        skill.intentHandlers = intentHandlersUK;
-    } else if (locale == 'de-DE') {
-        skill.intentHandlers = intentHandlersDE;
-    } else {
-        skill.intentHandlers = intentHandlersUS;
-    }
-
-    skill.execute(event, context);
-};
 
 // --------------- Helper Functions  -----------------------
 
@@ -276,7 +250,7 @@ var helper = {
         var prefix = 'http://pitchfork.com';
         request({
             uri: prefix + '/search/?query=' + artistAndAlbum,
-        }, function(error, response, body) {
+        }, function(error, responseFromRequest, body) {
             try{
                 var resultObject = JSON.parse(body.split('window.App=')[1].split(';</script>')[0]);
                 var review = resultObject.context.dispatcher.stores.SearchStore.results.albumreviews.items[0];
@@ -284,7 +258,7 @@ var helper = {
                 review.abstract = review.abstract.replace(/<\/?[^>]+(>|$)/g, "");
                 request({
                     uri: prefix + review.site_url
-                }, function(error, response, body) {
+                }, function(error, responseFromRequest, body) {
                     var $ = cheerio.load(body);
                     review.rating = $(".score").html();
                     callbackFunction(review);
@@ -295,3 +269,5 @@ var helper = {
         });
     }
 };
+
+module.exports = app;
