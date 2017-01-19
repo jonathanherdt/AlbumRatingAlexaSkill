@@ -52,7 +52,7 @@ app.intent('GetNewAlbumRatingIntent', {
             'Album': 'AMAZON.MusicAlbum',
             'Artist': 'AMAZON.Artist'
         },
-        'utterances': ['{|tell me|what is} {|Pitchfork\'s|the} album rating of Album {by|from} Artist']
+        'utterances': ['{|tell me|what is} {|Pitchfork\'s|the} album rating of {-|Album} {by|from} {-|Artist}']
     },
     function (request, response) {
         handleAlbumRatingRequest(request, response);
