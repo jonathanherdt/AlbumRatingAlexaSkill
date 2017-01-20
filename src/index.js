@@ -6,12 +6,9 @@ var Alexa = require('alexa-app');
 var APP_ID = 'amzn1.ask.skill.0fdc78be-c6a1-462b-9cfc-c8c1e01aeb11';
 var app = new Alexa.app('albumrater');
 
-var language = 'US';
-
 app.launch( function (request, response) {
-    language = request.locale? request.locale : 'US';
     var prompt, reprompt;
-    if(language === 'de-DE') {
+    if(request.locale === 'de-DE') {
         reprompt = 'Mit welchem Album von welchem Künstler soll ich dir helfen?';
         prompt = reprompt + ' Versuch\' es wie folgt: \'Frag\' Album-Bewerter nach Lemonade von Beyoncé\'';
     } else {
@@ -23,19 +20,19 @@ app.launch( function (request, response) {
 
 app.intent('AMAZON.HelpIntent', function (request, response) {
     var prompt, reprompt;
-    if(language === 'de-DE') {
+    if(request.locale === 'de-DE') {
         reprompt = 'Wie kann ich dir weiterhelfen?';
         prompt = 'Du kannst Anfragen so gestalten: \'Frag\' Album-Bewerter nach Lemonade von Beyoncé!\'' + reprompt;
     } else {
         reprompt = 'What can I help you with?';
-        prompt = 'You can make a request like \'Ask album rating about Lemonade by Beyonce!\', or, you can say \'Exit!\'... What can I help you with?' + reprompt;
+        prompt = 'You can make a request like \'Ask album rating about Lemonade by Beyonce!\', or, you can say \'Exit!\'... ' + reprompt;
     }
-    response.say(prompt).reprompt(reprompt).shouldEndSession(true).send();
+    response.say(prompt).reprompt(reprompt).shouldEndSession(false).send();
 });
 
 var exitFunction = function (request, response) {
     var speechOutput;
-    if(language === 'de-DE') {
+    if(request.locale === 'de-DE') {
         speechOutput = 'Auf Wiedersehen!';
     } else {
         speechOutput = 'Goodbye';
@@ -52,7 +49,8 @@ app.intent('GetNewAlbumRatingIntent', {
             'Album': 'AMAZON.MusicAlbum',
             'Artist': 'AMAZON.Artist'
         },
-        'utterances': ['{|tell me|what is} {|Pitchfork\'s|the} album rating of {-|Album} {by|from} {-|Artist}']
+        'utterances': ['{|tell me|what is} {|Pitchfork\'s|the} album rating of {-|Album} {by|from} {-|Artist}',
+        '{-|Album} by {-|Artist}']
     },
     function (request, response) {
         handleAlbumRatingRequest(request, response);
@@ -68,17 +66,25 @@ function handleAlbumRatingRequest(request, response) {
 
     helper.getAlbumRating(albumAndArtist, function(albumReview) {
         var speechOutput = '';
-        if(language !== 'de-DE'){
-            speechOutput = "Pitchfork rated " + album + " by " + artist + " at " + albumReview.rating + ". They wrote: " + albumReview.abstract;
+        if(request.locale !== 'de-DE'){
+            speechOutput = "Pitchfork rated " + albumReview.title + " by ";
+            for(var i = 0; i < albumReview.artists.length; i++){
+                if(albumReview.artists.length > 1 && i === albumReview.artists.length - 1){
+                    speechOutput += ' and ' + albumReview.artists[i];
+                } else {
+                    speechOutput += albumReview.artists[i] + ', ';
+                }
+            }
+            speechOutput += " at " + albumReview.rating + ". They wrote: " + albumReview.abstract;
         } else {
             speechOutput = 'Pitchfork hat ' + album + " von " + artist + " mit " + albumReview.rating + "bewertet. In der Zusammenfassung heißt es: <s xml:lang=\"en-US\">" + albumReview.abstract + "</s>";
         }
         response.say(speechOutput).send();
     }, function(errorFeedback){
-        if(language !== 'de-DE'){
-            response.say('I couldn\'t find a result for ' + album + ' by ' + artist + '.');
+        if(request.locale !== 'de-DE'){
+            response.say('I couldn\'t find a result for ' + album + ' by ' + artist + '.').send();
         } else {
-            response.say('Ich konnte keine Ergebnisse zu ' + album + ' von ' + artist + ' finden.');
+            response.say('Ich konnte keine Ergebnisse zu ' + album + ' von ' + artist + ' finden.').send();
         }
     });
 }
